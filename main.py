@@ -52,6 +52,9 @@ class SelectionTranslatorApp:
         )
 
     def queue_translation(self) -> None:
+        if self.busy:
+            return
+        self.busy = True
         self.events.put(("translate", None))
 
     def queue_settings(self) -> None:
@@ -79,12 +82,10 @@ class SelectionTranslatorApp:
         self.root.after(50, self.process_events)
 
     def begin_translation(self) -> None:
-        if self.busy:
-            return
         if not self.has_credentials():
+            self.busy = False
             self.show_settings()
             return
-        self.busy = True
         threading.Thread(target=self.translate_selection, daemon=True).start()
 
     def translate_selection(self) -> None:
@@ -120,9 +121,9 @@ class SelectionTranslatorApp:
 
             deadline = time.monotonic() + 0.8
             while time.monotonic() < deadline:
-                selected_text = pyperclip.paste()
+                selected_text = pyperclip.paste().strip()
                 if selected_text != marker:
-                    return selected_text.strip()
+                    return selected_text
                 time.sleep(0.01)
             return ""
         finally:
